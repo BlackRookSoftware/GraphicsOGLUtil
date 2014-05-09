@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE project>
+<!-- ====================================================================== 
+     Black Rook OpenGL Utilities Library Build File    
+     Matt Tropiano                                                                
+     ====================================================================== -->
+<project name="build" default="compile">
+
+	<description>Black Rook OpenGL Utilities</description>
+
+	<property file="build.properties" />
+
+	<!-- Dependencies -->
+	<property name="dev.base" value=".." />
+	<property name="S" value="${path.separator}" />
+
+	<!-- Project Libs -->
+	<property name="common.lib" value="${dev.base}/Common/bin" />
+	<property name="common.io.lib" value="${dev.base}/CommonIO/bin" />
+	<property name="ogl.lib" value="${dev.base}/GraphicsOGL/bin" />
+
+	<!-- Project Info -->
+	<property name="project.archive" value="blackrook-ogl-util" />
+	<property name="project.javadoc.title" value="Black Rook OpenGL Utilities" />
+	<property name="project.classpath" value="${common.lib}${S}${common.io.lib}${S}${ogl.lib}" />
+	<property name="project.javadoc.packages" value="
+		com.blackrook.ogl.util,
+		com.blackrook.ogl.util.enums,
+		com.blackrook.ogl.util.frame,
+		com.blackrook.ogl.util.math,
+		com.blackrook.ogl.util.model,
+		com.blackrook.ogl.util.overlay,
+		com.blackrook.ogl.util.resource,
+		com.blackrook.ogl.util.scene2d,
+		com.blackrook.ogl.util.tile2d,
+		com.blackrook.ogl.util.tile2d.model,
+		"
+	/>
+
+	<import file="build-import.xml" />
+
+	<target name="javadoc" depends="init.docs" description="Builds the documentation.">
+        <javadoc access="protected" 
+        	additionalparam="-J-Xmx512m  " author="true" 
+        	classpath="${project.classpath}${path.separator}${bin.dir}" 
+        	doctitle="${project.javadoc.title}" 
+        	sourcepath="${src.dir}" 
+        	packagenames="${project.javadoc.packages}"
+        	destdir="${docs.dir}" 
+    		source="1.7" 
+        	splitindex="true" 
+        	use="true" 
+        	version="true" 
+        	nodeprecated="false" 
+        	nodeprecatedlist="false" 
+        	noindex="false" 
+        	nonavbar="false" 
+        	notree="false"
+    		>
+            <link href="http://blackrooksoftware.com/docs/common/"/>
+            <link href="http://blackrooksoftware.com/docs/commonio/"/>
+            <link href="http://blackrooksoftware.com/docs/ogl/"/>
+            <link href="http://download.oracle.com/javase/6/docs/api/"/>
+        </javadoc>
+    </target>	
+
+</project>
