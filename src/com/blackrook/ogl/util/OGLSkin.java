@@ -191,12 +191,10 @@ public class OGLSkin implements Iterable<OGLSkin.Step>, Sizable
 		/** The texture generation type, t-axis. */
 		private int texGenT;
 
-		/** Texture index wave. */
-		private Wave textureIndexWave;
-		/** Object rotation wave. */
-		private Wave rotationWave;
 		/** Color wave. */
 		private Wave colorWave;
+		/** Texture index wave. */
+		private Wave textureIndexWave;
 		/** Texture rotation wave. */
 		private Wave textureRotationWave;
 		/** Texture S-coordinate wave. */
@@ -220,9 +218,8 @@ public class OGLSkin implements Iterable<OGLSkin.Step>, Sizable
 			textureRotation = new float[]{0,0};
 			textureCoords = new float[][][]{{ {0,1,0,0}, {0,1,0,0} }, { {0,1}, {0,1} }};
 
-			textureIndexWave = null;
-			rotationWave = null;
 			colorWave = null;
+			textureIndexWave = null;
 			textureRotationWave = null;
 			textureSWave = null;
 			textureTWave = null;
@@ -310,11 +307,6 @@ public class OGLSkin implements Iterable<OGLSkin.Step>, Sizable
 			return textureIndexWave;
 		}
 
-		public Wave getRotationWave()
-		{
-			return rotationWave;
-		}
-
 		public Wave getColorWave()
 		{
 			return colorWave;
@@ -347,11 +339,6 @@ public class OGLSkin implements Iterable<OGLSkin.Step>, Sizable
 		public void setTextureIndexWave(Wave textureIndexWave)
 		{
 			this.textureIndexWave = textureIndexWave;
-		}
-
-		public void setRotationZWave(Wave rotationWave)
-		{
-			this.rotationWave = rotationWave;
 		}
 
 		public void setColorWave(Wave colorWave)
