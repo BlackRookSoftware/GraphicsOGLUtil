@@ -268,43 +268,43 @@ public class OGL2DCamera implements SpatialHashable
 	}
 
 	@Override
-	public float getObjectHalfDepth()
+	public double getObjectHalfDepth()
 	{
 		return 0;
 	}
 
 	@Override
-	public float getObjectHalfHeight()
+	public double getObjectHalfHeight()
 	{
 		return cameraHeight/2f;
 	}
 
 	@Override
-	public float getObjectHalfWidth()
+	public double getObjectHalfWidth()
 	{
 		return cameraWidth/2f;
 	}
 
 	@Override
-	public float getObjectCenterX()
+	public double getObjectCenterX()
 	{
 		return cameraX + (cameraWidth/2f);
 	}
 
 	@Override
-	public float getObjectCenterY()
+	public double getObjectCenterY()
 	{
 		return cameraY + (cameraHeight/2f);
 	}
 
 	@Override
-	public float getObjectCenterZ()
+	public double getObjectCenterZ()
 	{
 		return 0;
 	}
 
 	@Override
-	public float getObjectRadius()
+	public double getObjectRadius()
 	{
 		return (float)Math.sqrt((cameraWidth/2f)*(cameraWidth/2f) + (cameraHeight/2f)*(cameraHeight/2f));
 	}
@@ -341,19 +341,19 @@ public class OGL2DCamera implements SpatialHashable
 	}
 
 	@Override
-	public float getObjectSweepX()
+	public double getObjectSweepX()
 	{
 		return 0;
 	}
 
 	@Override
-	public float getObjectSweepY()
+	public double getObjectSweepY()
 	{
 		return 0;
 	}
 
 	@Override
-	public float getObjectSweepZ()
+	public double getObjectSweepZ()
 	{
 		return 0;
 	}

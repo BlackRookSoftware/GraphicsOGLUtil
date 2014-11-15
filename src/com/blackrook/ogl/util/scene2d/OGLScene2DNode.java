@@ -813,8 +813,8 @@ public class OGLScene2DNode<T extends OGLScene2DElement> implements OGLResourceL
 		
 		g.matrixMode(MatrixType.MODELVIEW); g.matrixPush();
 		g.matrixTranslate(
-				pos_x - (camera.getObjectCenterX() - camera.getObjectHalfWidth()), 
-				pos_y - (camera.getObjectCenterY() - camera.getObjectHalfHeight()), 
+				(float)(pos_x - (camera.getObjectCenterX() - camera.getObjectHalfWidth())), 
+				(float)(pos_y - (camera.getObjectCenterY() - camera.getObjectHalfHeight())), 
 				0);
 		g.matrixRotateZ(getFlipY() ? -rotz : rotz);
 		g.matrixScale(pos_halfwidth, pos_halfheight, 1);
@@ -1075,8 +1075,8 @@ public class OGLScene2DNode<T extends OGLScene2DElement> implements OGLResourceL
 			g.matrixPush();
 			g.matrixReset();
 			g.matrixTranslate(
-					-(camera.getObjectCenterX() - camera.getObjectHalfWidth()), 
-					-(camera.getObjectCenterY() - camera.getObjectHalfHeight()), 
+					(float)(-(camera.getObjectCenterX() - camera.getObjectHalfWidth())), 
+					(float)(-(camera.getObjectCenterY() - camera.getObjectHalfHeight())), 
 					0);
 
 			g.setTextureUnit(0);

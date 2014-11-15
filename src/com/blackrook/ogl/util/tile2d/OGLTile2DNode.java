@@ -254,17 +254,17 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 		
 		if (getFlipY())
 			g.matrixOrtho(
-				camera.getObjectCenterX() - camera.getObjectHalfWidth(), 
-				camera.getObjectCenterX() + camera.getObjectHalfWidth(), 
-				camera.getObjectCenterY() + camera.getObjectHalfHeight(), 
-				camera.getObjectCenterY() - camera.getObjectHalfHeight(), 
+				(float)(camera.getObjectCenterX() - camera.getObjectHalfWidth()), 
+				(float)(camera.getObjectCenterX() + camera.getObjectHalfWidth()), 
+				(float)(camera.getObjectCenterY() + camera.getObjectHalfHeight()), 
+				(float)(camera.getObjectCenterY() - camera.getObjectHalfHeight()), 
 				-1, 1);
 		else
 			g.matrixOrtho(
-				camera.getObjectCenterX() - camera.getObjectHalfWidth(), 
-				camera.getObjectCenterX() + camera.getObjectHalfWidth(), 
-				camera.getObjectCenterY() - camera.getObjectHalfHeight(), 
-				camera.getObjectCenterY() + camera.getObjectHalfHeight(), 
+				(float)(camera.getObjectCenterX() - camera.getObjectHalfWidth()), 
+				(float)(camera.getObjectCenterX() + camera.getObjectHalfWidth()), 
+				(float)(camera.getObjectCenterY() - camera.getObjectHalfHeight()), 
+				(float)(camera.getObjectCenterY() + camera.getObjectHalfHeight()), 
 				-1, 1);
 
 		createRenderList(g);
