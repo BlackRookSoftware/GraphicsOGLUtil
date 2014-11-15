@@ -1,7 +1,7 @@
 # Black Rook OpenGL Utilities
 
 Copyright (c) 2014 Black Rook Software. All rights reserved.  
-[http://blackrooksoftware.com/projects.htm?name=oglutil](http://blackrooksoftware.com/projects.htm?name=oglutil)  
+[http://blackrooksoftware.com/projects.htm?name=graphicsoglutil](http://blackrooksoftware.com/projects.htm?name=graphicsoglutil)  
 [https://github.com/BlackRookSoftware/GraphicsOGLUtil](https://github.com/BlackRookSoftware/GraphicsOGLUtil)
 
 ### NOTICE
