@@ -2,6 +2,7 @@ package com.blackrook.ogl.util.scene2d;
 
 import com.blackrook.commons.math.geometry.Rectangle2F;
 import com.blackrook.ogl.data.OGLColor;
+import com.blackrook.ogl.util.OGLSkin;
 
 /**
  * Implementors of this class describe a model by which scene elements
