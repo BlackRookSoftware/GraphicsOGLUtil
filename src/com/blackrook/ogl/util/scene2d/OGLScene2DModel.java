@@ -2,7 +2,8 @@ package com.blackrook.ogl.util.scene2d;
 
 import com.blackrook.commons.math.geometry.Rectangle2F;
 import com.blackrook.ogl.data.OGLColor;
-import com.blackrook.ogl.util.OGLSkin;
+import com.blackrook.ogl.mesh.MeshView;
+import com.blackrook.ogl.util.resource.OGLTextureResource;
 
 /**
  * Implementors of this class describe a model by which scene elements
@@ -88,14 +89,15 @@ public interface OGLScene2DModel<T extends Object>
 	 * @param halfHeight the half-height of the bounding area.
 	 * @return if the object is in the bounding box. 
 	 */
-	public boolean objectIsInBox(T object, double centerX, double centerY, double halfHidth, double halfHeight); 
+	public boolean objectIsInBox(T object, double centerX, double centerY, double halfWidth, double halfHeight); 
 	
 	/**
-	 * Gets a skin to use for a particular object.
+	 * Gets the textures to use for a particular object.
 	 * @param object the object.
-	 * @return the {@link OGLSkin} to use.
+	 * @param outTextures the array that receives the textures to use.
+	 * @return the amount of texture units.
 	 */
-	public OGLSkin getObjectSkin(T object);
+	public int getObjectTextures(T object, OGLTextureResource[] outTextures);
 	
 	/**
 	 * Gets the 2D bounds of a particular object.
@@ -110,6 +112,13 @@ public interface OGLScene2DModel<T extends Object>
 	 * @param outColor the color object to set colors on.
 	 */
 	public void getObjectColor(T object, OGLColor outColor);
+	
+	/**
+	 * Gets the mesh to use to render a particular object.
+	 * @param object the object.
+	 * @return the mesh view to use for rendering the geometry.
+	 */
+	public MeshView getObjectMesh(T object);
 	
 	/**
 	 * Gets the a sort bias for a particular object, which can

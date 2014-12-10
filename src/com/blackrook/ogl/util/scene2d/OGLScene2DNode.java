@@ -30,16 +30,13 @@ import com.blackrook.ogl.enums.MatrixType;
 import com.blackrook.ogl.enums.TextureCoordType;
 import com.blackrook.ogl.enums.TextureGenMode;
 import com.blackrook.ogl.mesh.MeshView;
+import com.blackrook.ogl.node.OGLCanvasNodeAdapter;
 import com.blackrook.ogl.object.buffer.OGLFloatBuffer;
 import com.blackrook.ogl.object.shader.OGLShaderProgram;
 import com.blackrook.ogl.object.texture.OGLTexture2D;
 import com.blackrook.ogl.util.OGL2DCamera;
 import com.blackrook.ogl.util.OGL2DCameraListener;
-import com.blackrook.ogl.util.OGLSkin;
-import com.blackrook.ogl.util.OGLSkin.BlendType;
-import com.blackrook.ogl.util.OGLSkin.Step;
 import com.blackrook.ogl.util.OGLResourceLoader;
-import com.blackrook.ogl.util.OGLResourceLoaderUser;
 import com.blackrook.ogl.util.resource.OGLShaderResource;
 import com.blackrook.ogl.util.resource.OGLTextureResource;
 
@@ -47,10 +44,8 @@ import com.blackrook.ogl.util.resource.OGLTextureResource;
  * OGL Node that does 2D scene rendering via a multipass method.
  * @author Matthew Tropiano
  */
-public class OGLScene2DNode<T extends OGLScene2DElement> implements OGLResourceLoaderUser
+public class OGLScene2DNode<T extends Object> extends OGLCanvasNodeAdapter
 {
-	protected static final Step DEFAULT_STEP = new Step();
-	
 	/** Is this layer enabled? */
 	private boolean enabled;
 
@@ -162,7 +157,7 @@ public class OGLScene2DNode<T extends OGLScene2DElement> implements OGLResourceL
 		this.mousePoint = new Point2F();
 		this.enabled = true;
 		this.cameraChanged = true;
-		setResourceLoader(loader);
+		this.loader = loader;
 		setCamera(camera);
 		setBackingObjectHash(new Hash<T>());
 	}
@@ -187,18 +182,6 @@ public class OGLScene2DNode<T extends OGLScene2DElement> implements OGLResourceL
 		sceneObjectIterator = sceneObjects.iterator();
 	}
 	
-	@Override
-	public OGLResourceLoader getResourceLoader()
-	{
-		return loader;
-	}
-
-	@Override
-	public void setResourceLoader(OGLResourceLoader loader)
-	{
-		this.loader = loader;
-	}
-
 	/**
 	 * Adds an object to the scene.
 	 * @param object the object to add.

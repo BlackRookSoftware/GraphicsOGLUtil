@@ -7,32 +7,22 @@
  ******************************************************************************/
 package com.blackrook.ogl.util.tile2d;
 
-import java.nio.FloatBuffer;
-
-import com.blackrook.commons.Common;
 import com.blackrook.commons.list.List;
 import com.blackrook.ogl.OGLGeometryUtils;
 import com.blackrook.ogl.OGLGraphics;
+import com.blackrook.ogl.OGLMesh;
 import com.blackrook.ogl.OGLGeometryUtils.GeometryInfo;
+import com.blackrook.ogl.data.OGLColor;
 import com.blackrook.ogl.enums.AttribType;
-import com.blackrook.ogl.enums.BlendFunc;
-import com.blackrook.ogl.enums.BufferType;
-import com.blackrook.ogl.enums.CachingHint;
 import com.blackrook.ogl.enums.FaceSide;
 import com.blackrook.ogl.enums.GeometryType;
-import com.blackrook.ogl.enums.LogicFunc;
 import com.blackrook.ogl.enums.MatrixType;
+import com.blackrook.ogl.mesh.MeshView;
 import com.blackrook.ogl.mesh.PolygonMesh;
-import com.blackrook.ogl.object.buffer.OGLFloatBuffer;
-import com.blackrook.ogl.object.shader.OGLShaderProgram;
-import com.blackrook.ogl.object.texture.OGLTexture2D;
+import com.blackrook.ogl.node.OGLCanvasNodeAdapter;
 import com.blackrook.ogl.util.OGL2DCamera;
-import com.blackrook.ogl.util.OGLSkin;
+import com.blackrook.ogl.util.OGLDrawContext;
 import com.blackrook.ogl.util.OGLResourceLoader;
-import com.blackrook.ogl.util.OGLResourceLoaderUser;
-import com.blackrook.ogl.util.OGLSkin.BlendType;
-import com.blackrook.ogl.util.OGLSkin.Step;
-import com.blackrook.ogl.util.resource.OGLShaderResource;
 import com.blackrook.ogl.util.resource.OGLTextureResource;
 
 /**
@@ -40,8 +30,24 @@ import com.blackrook.ogl.util.resource.OGLTextureResource;
  * NOTE: This does not pay attention to object rotation from render steps. 
  * @author Matthew Tropiano
  */
-public class OGLTile2DNode implements OGLResourceLoaderUser
+public class OGLTile2DNode extends OGLCanvasNodeAdapter
 {
+	/** Rectangular mesh used by all tiles. */
+	protected static final OGLMesh TILE = new PolygonMesh(GeometryType.QUADS, 4, 1)
+	{{
+		setVertex(0, 0, 1, 0);
+		setTextureCoordinate(0, 0, 1);
+		setVertex(1, 0, 0, 0);
+		setTextureCoordinate(1, 0, 0);
+		setVertex(2, 1, 0, 0);
+		setTextureCoordinate(2, 1, 0);
+		setVertex(3, 1, 1, 0);
+		setTextureCoordinate(3, 1, 1);
+	}};
+
+	/** View for tile. */
+	protected static final MeshView TILE_VIEW = TILE.getView();
+
 	/** Reference to resource loader. */
 	private OGLResourceLoader loader;
 	/** The list of bound listeners. */
@@ -101,18 +107,12 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 
 	/* ============= Per frame variables ============= */
 	
-	/** The list of what to render. */
-	protected List<Node> renderList;
-	/** Render list end index. */
-	protected int renderListSize;
 	/** Context for rendering.  */
-	protected Context context;
-	/** Last step instance. */
-	protected StepInstance currentStepInstance; 
-	/** VBO Context. */
-	protected VBOContext vboContext;
-	/** Mesh for non-VBO. */
-	protected PolygonMesh mesh;
+	protected OGLDrawContext context;
+	/** Color storage. */
+	protected OGLColor color;
+	/** Temp texture resources. */
+	protected OGLTextureResource[] textureRes;
 	/** Temp texture coordinates. */
 	protected float[] textureTemp;
 	
@@ -136,7 +136,6 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 	{
 		OGLGeometryUtils.vertices(3, 9, 0),
 		OGLGeometryUtils.texCoords(0, 2, 9, 3),
-		OGLGeometryUtils.color(4, 9, 5)
 	};
 	
 	/**
@@ -159,14 +158,14 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 	 */
 	public OGLTile2DNode(OGLResourceLoader loader, OGLTile2DModel model, OGL2DCamera camera, float tileWidth, float tileHeight)
 	{
-		renderList = new List<Node>(200);
 		listenerList = new List<OGLTile2DListener>(2);
 		tileModel = model;
-		mesh = new PolygonMesh(GeometryType.QUADS, 4, 1);
 		mouseGridX = -1;
 		mouseGridY = -1;
-
-		setResourceLoader(loader);
+		this.loader = loader;
+		this.textureRes = new OGLTextureResource[16];
+		this.color = new OGLColor();
+		
 		setCamera(camera);
 		setDepthTest(false);
 		setDefaultTileWidth(tileWidth);
@@ -192,18 +191,6 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 	}
 
 	@Override
-	public OGLResourceLoader getResourceLoader()
-	{
-		return loader;
-	}
-
-	@Override
-	public void setResourceLoader(OGLResourceLoader loader)
-	{
-		this.loader = loader;
-	}
-
-	@Override
 	public void onCanvasResize(int new_width, int new_height)
 	{
 		canvasWidth = new_width;
@@ -216,18 +203,20 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 		polygonsRendered = 0;
 		
 		g.attribPush(
-				AttribType.LIGHTING, 		// light
-				AttribType.ENABLE, 			// "enable"
-				AttribType.DEPTH_BUFFER, 	// depth func/mask
-				AttribType.COLOR_BUFFER,	// blend/color
-				AttribType.POLYGON,			// face cull
-				AttribType.SCISSOR);
+			AttribType.LIGHTING, 		// light
+			AttribType.ENABLE, 			// "enable"
+			AttribType.DEPTH_BUFFER, 	// depth func/mask
+			AttribType.COLOR_BUFFER,	// blend/color
+			AttribType.POLYGON,			// face cull
+			AttribType.SCISSOR
+		);
 		
 		g.setBlendingEnabled(true);
 		g.setDepthTestEnabled(depthTest);
 		g.setDepthMask(depthTest);
 		g.setLightingEnabled(false);
 		g.setFaceCullingEnabled(true);
+		
 		if (getFlipY())
 			g.setFaceCullingSide(FaceSide.FRONT);
 		else
@@ -258,17 +247,30 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 				(float)(camera.getObjectCenterX() + camera.getObjectHalfWidth()), 
 				(float)(camera.getObjectCenterY() + camera.getObjectHalfHeight()), 
 				(float)(camera.getObjectCenterY() - camera.getObjectHalfHeight()), 
-				-1, 1);
+				-1, 1
+			);
 		else
 			g.matrixOrtho(
 				(float)(camera.getObjectCenterX() - camera.getObjectHalfWidth()), 
 				(float)(camera.getObjectCenterX() + camera.getObjectHalfWidth()), 
 				(float)(camera.getObjectCenterY() - camera.getObjectHalfHeight()), 
 				(float)(camera.getObjectCenterY() + camera.getObjectHalfHeight()), 
-				-1, 1);
+				-1, 1
+			);
 
-		createRenderList(g);
-		drawRenderList(g);
+		timeRenderScene = System.nanoTime();
+
+		g.setTexture2DEnabled(true);
+		
+		if (context == null)
+			context = new OGLDrawContext();
+		else
+			context.reset(g, loader);
+
+		// draw shit here.
+		drawTiles(g);
+	
+		timeRenderScene = System.nanoTime() - timeRenderScene;
 
 		g.matrixMode(MatrixType.PROJECTION);
 		g.matrixPop();
@@ -357,24 +359,6 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 	public void setFlipY(boolean flipY)
 	{
 		this.flipY = flipY;
-	}
-
-	/**
-	 * Gets the individual tile width in units for a specific tile.
-	 * Calls {@link #getScaleX(int, int)}.
-	 */
-	public float getTileWidth(int x, int y)
-	{
-		return defaultTileWidth * getScaleX(x, y);
-	}
-
-	/**
-	 * Gets the individual tile height in units for a specific tile.
-	 * Calls {@link #getScaleY(int, int)}.
-	 */
-	public float getTileHeight(int x, int y)
-	{
-		return defaultTileHeight * getScaleY(x, y);
 	}
 
 	@Override
@@ -488,11 +472,12 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 	 * Gets the appropriate skin set for a set of coordinates. 
 	 * @param x	the grid x-coordinate.
 	 * @param y the grid y-coordinate.
-	 * @return the OGLSkin, or null if no OGLSkin for the position on the grid.
+	 * @param outTextures the output array for the textures.
+	 * @return the amount of textures to bind.
 	 */
-	public OGLSkin getSkin(int x, int y)
+	public int getTextures(int x, int y, OGLTextureResource[] outTextures)
 	{
-		return tileModel != null ? tileModel.getSkin(x, y) : null; 
+		return tileModel != null ? tileModel.getTextures(x, y, outTextures) : 0; 
 	}
 
 	@Override
@@ -635,248 +620,15 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 	}
 
 	/**
-	 * Draws the tiles.
+	 * Draws the tiles (lazily for now - no sort).
 	 */
-	protected void drawRenderList(OGLGraphics g)
+	protected void drawTiles(OGLGraphics g)
 	{
-		timeRenderScene = System.nanoTime();
-		
-		g.setTexture2DEnabled(true);
-		
-		if (context == null)
-		{
-			// reset context
-			g.setTextureUnit(0);
-			g.unbindTexture2D();
-			g.unbindShaderProgram();
-			g.setBlendingFunc(BlendFunc.REPLACE);
-			context = new Context();
-		}
-		else
-		{
-			// reset context
-			if (context.multitexture != null) for (int i = 0; i < context.multitexture.length; i++)
-			{
-				g.setTextureUnit(i);
-				g.unbindTexture2D();
-			}
-			else
-			{
-				g.setTextureUnit(0);
-				g.unbindTexture2D();
-			}
-			
-			g.unbindShaderProgram();
-			g.setBlendingFunc(BlendFunc.REPLACE);
-			context.clear();
-		}
+		timeBuildScene = 0L;
+		timeSortScene = 0L;
 	
-		for (int i = 0; i < renderListSize; i++)
-		{
-			Node n = renderList.getByIndex(i);
-			displayContextStepBreak(g, context, n);
-			displayContextPassBreak(g, context, n);
-			displayContextShaderBreak(g, context, n);
-			displayContextTextureBreak(g, context, n);
-			displayContextBlendBreak(g, context, n);
-			displayObject(g, n);
-		}
+		g.matrixMode(MatrixType.MODELVIEW);
 		
-		if (g.supportsVertexBuffers())
-			displayVBOBreak(g);
-	
-		timeRenderScene = System.nanoTime() - timeRenderScene;
-	}
-
-	/**
-	 * Performs a pass break if necessary.
-	 */
-	protected void displayContextStepBreak(OGLGraphics g, Context context, Node n)
-	{
-		if (context.step != n.nodeStepRef)
-		{
-			displayVBOBreak(g);
-			context.step = n.nodeStepRef;
-			setStepInstance(g, context.step); 
-		}
-	}
-
-	/**
-	 * Performs a pass break if necessary.
-	 */
-	protected void displayContextPassBreak(OGLGraphics g, Context context, Node n)
-	{
-		if (context.pass != n.nodePass)
-		{
-			displayVBOBreak(g);
-			context.pass = n.nodePass;
-			if (depthTest)
-			{
-				if (context.pass == 0)
-					g.setDepthFunc(LogicFunc.GREATER_OR_EQUAL);
-				else
-					g.setDepthFunc(LogicFunc.EQUAL);
-			}
-		}
-	}
-
-	/**
-	 * Performs a shader break if necessary.
-	 */
-	protected void displayContextShaderBreak(OGLGraphics g, Context context, Node n)
-	{
-		if (context.shader != n.nodeShader)
-		{
-			displayVBOBreak(g);
-			context.shader = n.nodeShader;
-			if (context.shader != null)
-				context.shader.bindTo(g);
-			else
-				g.unbindShaderProgram();
-		}
-	}
-
-	/**
-	 * Performs a texture break if necessary.
-	 */
-	protected void displayContextTextureBreak(OGLGraphics g, Context context, Node n)
-	{
-		if (!n.nodeStepRef.isMultitexture())
-		{
-			if (context.texture != n.nodeTexture || context.multitexture != null)
-			{
-				displayVBOBreak(g);
-				if (context.multitexture != null) for (int t = 0; t < context.multitexture.length; t++)
-				{
-					g.setTextureUnit(t);
-					g.unbindTexture2D();
-				}
-					
-				context.multitexture = null;
-				context.texture = n.nodeTexture;
-				g.setTextureUnit(0);
-				if (context.texture != null)
-					context.texture.bindTo(g);
-				else
-					g.unbindTexture2D();
-			}
-		}
-		else if (n.nodeMultiTexture.length > 0)
-		{
-			if (context.multitexture != n.nodeMultiTexture || context.texture != null)
-			{
-				displayVBOBreak(g);
-				context.texture = null;
-				context.multitexture = n.nodeMultiTexture;
-				for (int i = 0; i < context.multitexture.length; i++)
-				{
-					if (context.multitexture[i] != null)
-					{
-						g.setTextureUnit(i);
-						context.multitexture[i].bindTo(g);
-					}
-					else
-					{
-						g.setTextureUnit(i);
-						g.unbindTexture2D();
-					}
-				}
-			}
-		}
-		else
-		{
-			g.setTextureUnit(0);
-			g.unbindTexture2D();
-		}
-	
-	}
-
-	/**
-	 * Performs a blend mode break if necessary.
-	 */
-	protected void displayContextBlendBreak(OGLGraphics g, Context context, Node n)
-	{
-		if (context.blendMode != n.nodeBlendMode)
-		{
-			displayVBOBreak(g);
-			context.blendMode = n.nodeBlendMode;
-	
-			switch (context.blendMode)
-			{
-				case REPLACE:
-					g.setBlendingFunc(BlendFunc.REPLACE);
-					break;
-				case ALPHA:
-					g.setBlendingFunc(BlendFunc.ALPHA);
-					break;
-				case ADD:
-					g.setBlendingFunc(BlendFunc.ADDITIVE);
-					break;
-				case MULTIPLY:
-					g.setBlendingFunc(BlendFunc.MULTIPLICATIVE);
-					break;
-			}
-		}
-	}
-
-	/**
-	 * Draws the current object.
-	 */
-	protected void displayObject(OGLGraphics g, Node n)
-	{
-		float x = n.x;
-		float y = n.y;
-		float width = n.width;
-		float height = n.height;
-		
-		if (g.supportsVertexBuffers())
-		{
-			if (vboContext == null)
-				vboContext = new VBOContext(g);
-			vboContext.addTileCoords(currentStepInstance, n);
-		}
-		else
-		{
-			g.setTextureUnit(0);
-			g.matrixMode(MatrixType.TEXTURE); g.matrixPush();
-			g.matrixTranslate(-currentStepInstance.pivot_s, -currentStepInstance.pivot_t, 0);
-			g.matrixRotateZ(currentStepInstance.texture_rot);
-			g.matrixTranslate(currentStepInstance.texture_s0-currentStepInstance.pivot_s, 
-					currentStepInstance.texture_t0-currentStepInstance.pivot_t, 0);
-			g.matrixScale(currentStepInstance.texture_s1-currentStepInstance.texture_s0, 
-					currentStepInstance.texture_t1-currentStepInstance.texture_t0, 1);
-		
-			g.setColor(
-					camera.getRed() * n.r * currentStepInstance.color_r,
-					camera.getGreen() * n.g * currentStepInstance.color_g,
-					camera.getBlue() * n.b * currentStepInstance.color_b,
-					camera.getAlpha() * n.a * currentStepInstance.color_a
-					);
-			
-			mesh.setTextureCoordinate(0, n.s0, n.t0);
-			mesh.setTextureCoordinate(1, n.s0, n.t1);
-			mesh.setTextureCoordinate(2, n.s1, n.t1);
-			mesh.setTextureCoordinate(3, n.s1, n.t0);
-			mesh.setVertex(0, x, y+height, depth);
-			mesh.setVertex(1, x, y, depth);
-			mesh.setVertex(2, x+width, y, depth);
-			mesh.setVertex(3, x+width, y+height, depth);
-			mesh.getView().drawUsing(g);
-			
-			g.setTextureUnit(0);
-			g.matrixMode(MatrixType.TEXTURE); g.matrixPop();
-		}
-	}
-
-	/**
-	 * Creates the render list.
-	 */
-	protected void createRenderList(OGLGraphics g)
-	{
-		renderListSize = 0;
-		timeBuildScene = System.nanoTime();
-		long currentTime = g.currentTimeMillis();
-	
 		if (camera != null)
 		{
 			float endX = camera.getX() + camera.getWidth() + defaultTileWidth;
@@ -887,44 +639,23 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 					if (!getVisible(ix, iy))
 						continue;
 					
-					OGLSkin skin = getSkin(ix, iy);
-					if (skin != null)
-					{
-						for (int p = 0; p < skin.size(); p++)
-						{
-							Step step = skin.get(p);
-							Node n = getRenderNode(g, currentTime, p, step);
-							setNodeCoords(n, ix, iy);
-						}
-					}
+					context.setBlending(g, tileModel.getBlendingFunction(ix, iy));
+					int units = tileModel.getTextures(ix, iy, textureRes);
+					context.setTextureEnvironment(g, tileModel.getTextureMode(ix, iy));
+					context.setTextures(g, loader, textureRes, units);
+					context.setShader(g, loader, tileModel.getShader(ix, iy));
+					
+					tileModel.getColor(ix, iy, color);
+					g.setColor(color);
+					
+					g.matrixPush();
+					g.matrixTranslate(ix * defaultTileWidth, iy * defaultTileHeight, depth);
+					g.matrixScale(defaultTileWidth, defaultTileHeight, 1f);
+					TILE_VIEW.drawUsing(g);
+					g.matrixPop();
 				}
 		}
-		timeBuildScene = System.nanoTime() - timeBuildScene;
 		
-		timeSortScene = System.nanoTime();
-		renderList.sort(0, renderListSize);
-		timeSortScene = System.nanoTime() - timeSortScene;
-	}
-
-	/**
-	 * Sets the current surface step.
-	 */
-	protected void setStepInstance(OGLGraphics g, Step step)
-	{
-		if (currentStepInstance == null) 
-			currentStepInstance = new StepInstance();
-		long currentTime = g.currentTimeMillis();
-		currentStepInstance.texture_rot = step.getTextureRotation(currentTime);
-		currentStepInstance.texture_s0 = step.getTextureS0(currentTime);
-		currentStepInstance.texture_t0 = step.getTextureT0(currentTime);
-		currentStepInstance.texture_s1 = step.getTextureS1(currentTime);
-		currentStepInstance.texture_t1 = step.getTextureT1(currentTime);
-		currentStepInstance.color_r = step.getColorRed(currentTime);
-		currentStepInstance.color_g = step.getColorGreen(currentTime);
-		currentStepInstance.color_b = step.getColorBlue(currentTime);
-		currentStepInstance.color_a = step.getColorAlpha(currentTime);
-		currentStepInstance.pivot_s = step.getTextureRotationPivotS();
-		currentStepInstance.pivot_t = step.getTextureRotationPivotT();
 	}
 
 	/**
@@ -942,9 +673,12 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 	 * @param x	the grid x-coordinate.
 	 * @param y the grid y-coordinate.
 	 */
-	protected int getColorARGB(int x, int y)
+	protected void getColor(int x, int y, OGLColor out)
 	{
-		return tileModel != null ? tileModel.getColorARGB(x, y) : 0; 
+		if (tileModel != null)
+			tileModel.getColor(x, y, out);
+		else
+			out.set(0);
 	}
 
 	/**
@@ -958,91 +692,6 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 	{
 		if (tileModel != null)
 			tileModel.getTextureOffsets(x, y, out);
-	}
-
-	/**
-	 * Returns the x-offset of a tile in units.
-	 */
-	protected float getOffsetX(int x, int y)
-	{
-		return tileModel != null ? tileModel.getOffsetX(x, y) : null; 
-	}
-
-	/**
-	 * Returns the y-offset of a tile in units.
-	 */
-	protected float getOffsetY(int x, int y)
-	{
-		return tileModel != null ? tileModel.getOffsetY(x, y) : null; 
-	}
-
-	/**
-	 * Gets the individual tile scale, x-axis, for a specific tile.
-	 */
-	protected float getScaleX(int x, int y)
-	{
-		return tileModel != null ? tileModel.getScaleX(x, y) : null; 
-	}
-
-	/**
-	 * Gets the individual tile scale, y-axis, for a specific tile.
-	 */
-	protected float getScaleY(int x, int y)
-	{
-		return tileModel != null ? tileModel.getScaleY(x, y) : null; 
-	}
-
-	private Node getRenderNode(OGLGraphics g, long graphicTime, int skinStepIndex, Step step)
-	{
-		Node n = null;
-		if (renderList.size() == renderListSize)
-		{
-			n = new Node(g, loader, graphicTime, step, skinStepIndex);
-			renderList.add(n);
-		}
-		else
-		{
-			n = renderList.getByIndex(renderListSize);
-			n.set(g, loader, graphicTime, step, skinStepIndex);
-		}
-		
-		return n;
-	}
-
-	private void setNodeCoords(Node n, int ix, int iy)
-	{
-		n.ix = ix;
-		n.iy = iy;
-		n.x = ix * defaultTileWidth - getOffsetX(ix, iy);
-		n.y = iy * defaultTileHeight - getOffsetY(ix, iy);
-		n.width = defaultTileWidth * getScaleX(ix, iy);
-		n.height = defaultTileHeight * getScaleY(ix, iy);
-		
-		if (textureTemp == null)
-			textureTemp = new float[4];
-		
-		getTextureOffsets(ix, iy, textureTemp);
-		
-		n.s0 = textureTemp[0];
-		n.t0 = textureTemp[1];
-		n.s1 = textureTemp[2];
-		n.t1 = textureTemp[3];
-		int c = getColorARGB(ix, iy);
-		n.r = (((c >> 16) & 0x0ff) / 255f) * camera.getRed();
-		n.g = (((c >> 8) & 0x0ff) / 255f) * camera.getGreen();
-		n.b = (((c >> 0) & 0x0ff) / 255f) * camera.getBlue();
-		n.a = (((c >> 24) & 0x0ff) / 255f) * camera.getAlpha();
-		
-		renderListSize++;
-	}
-
-	private void displayVBOBreak(OGLGraphics g)
-	{
-		if (currentStepInstance == null)
-			return;
-		
-		if (vboContext != null)
-			vboContext.flush(g, currentStepInstance);
 	}
 
 	/** 
@@ -1208,314 +857,6 @@ public class OGLTile2DNode implements OGLResourceLoaderUser
 	{
 		for (int i = 0; i < listenerList.size(); i++)
 			listenerList.getByIndex(i).gridUnfocus();
-	}
-
-	/**
-	 * Holds a renderer node.
-	 */
-	protected static class Node implements Comparable<Node>
-	{
-		/** The reference to the surface step that is used to create this node. */
-		public Step nodeStepRef;
-	
-		/** The texture object to use. */
-		public OGLTexture2D nodeTexture;
-		/** Multiple texture unit combiner. */
-		public OGLTexture2D[] nodeMultiTexture;
-		/** The shader program object to use. */
-		public OGLShaderProgram nodeShader;
-	
-		/** The pass target index/type for segmented rendering.*/
-		public int nodeTarget;
-		/** The pass number for rendering ordering. */
-		public int nodePass;
-		/** 
-		 * The blending type for this node. 
-		 * Corresponds to OGLRenderStep's BLEND constants. 
-		 */
-		public BlendType nodeBlendMode;
-		/** Texture S-axis gentype. */
-		public int nodeSTexGen;
-		/** Texture T-axis gentype. */
-		public int nodeTTexGen;
-
-		public int ix;
-		public int iy;
-		
-		public float x;
-		public float y;
-		public float width;
-		public float height;
-		public float s0;
-		public float t0;
-		public float s1;
-		public float t1;
-		public float r;
-		public float g;
-		public float b;
-		public float a;
-
-		/**
-		 * Creates a new render node.
-		 */
-		public Node(OGLGraphics g, OGLResourceLoader loader, 
-				long currentTime, Step step, int pass)
-		{
-			set(g, loader, currentTime, step, pass);
-		}
-		
-		/**
-		 * Creates a new render node.
-		 */
-		public void set(OGLGraphics g, OGLResourceLoader loader, 
-				long currentTime, Step step, int pass)
-		{
-			nodeTarget = 0;
-			nodePass = pass;
-			nodeStepRef = step;
-			nodeBlendMode = step.getBlendType();
-			nodeSTexGen = step.getTexGenS();
-			nodeTTexGen = step.getTexGenT();
-	
-			OGLShaderResource oglsr = step.getShaderProgram();
-			if (oglsr != null)
-			{
-				if (!loader.containsShader(oglsr))
-					loader.cacheShader(g, oglsr);
-				nodeShader = loader.getShader(oglsr);
-			}
-			else
-				nodeShader = null;
-			
-			if (!step.isMultitexture())
-			{
-				int ti = step.getTextureIndex(currentTime);
-				if (ti >= 0)
-				{
-					OGLTextureResource ogltr = step.getTextureList()[ti];
-					if (!loader.containsTexture(ogltr))
-						loader.cacheTexture(g, ogltr);
-					nodeTexture = loader.getTexture(ogltr);
-				}
-				else
-					nodeTexture = null;
-			}
-			else 
-			{
-				nodeMultiTexture = new OGLTexture2D[step.getTextureList().length];
-				int i = 0;
-				OGLTextureResource[] trlist = step.getTextureList();
-				for (int x = 0; x < trlist.length; x++)
-				{
-					OGLTextureResource ogltr = trlist[x];
-					if (!loader.containsTexture(ogltr))
-						loader.cacheTexture(g, ogltr);
-					nodeMultiTexture[i++] = loader.getTexture(ogltr);
-				}
-			}
-		}
-		
-		@Override
-		public int compareTo(Node n)
-		{
-			return  
-				nodeTarget == n.nodeTarget ?
-				nodePass == n.nodePass ?
-				getShaderId(nodeShader) == getShaderId(n.nodeShader) ?
-				getTexId(nodeTexture) == getTexId(n.nodeTexture) ?
-				nodeBlendMode == n.nodeBlendMode ?
-				nodeSTexGen == n.nodeSTexGen ?
-				nodeTTexGen == n.nodeTTexGen ?
-					0 :
-				nodeTTexGen - n.nodeTTexGen :
-				nodeSTexGen - n.nodeSTexGen :
-				nodeBlendMode.ordinal() - n.nodeBlendMode.ordinal() : 
-				getTexId(nodeTexture) - getTexId(n.nodeTexture) :
-				getShaderId(nodeShader) - getShaderId(n.nodeShader) :
-				nodePass - n.nodePass :
-				nodeTarget - n.nodeTarget;
-		}
-	
-		// get the texture id of a texture object used for sorting.
-		protected int getTexId(OGLTexture2D texture)
-		{
-			return texture == null ? 0 : texture.getGLId();
-		}
-	
-		// get the shader id of a shader object used for sorting.
-		protected int getShaderId(OGLShaderProgram shader)
-		{
-			return shader == null ? 0 : shader.getGLId();
-		}
-	}
-	
-	/** Vertex Buffer rendering context. */
-	protected class VBOContext
-	{
-		/** Geometry Float Buffer */
-		protected OGLFloatBuffer geometryBuffer;
-		
-		/** Has this already been flushed? */
-		protected boolean vboFlush;
-		
-		/** Number of VBO Elements to draw. */
-		protected int vboElements;
-
-		/** Interleaved Geometry Info Buffer. */
-		protected FloatBuffer geometryFloatBuffer;
-		/** Interleaved Geometry Info Buffer Index */
-		protected int geometryListIndex;
-	
-		public VBOContext(OGLGraphics g)
-		{
-			vboFlush = true;
-			geometryBuffer = new OGLFloatBuffer(g, BufferType.GEOMETRY);
-		}
-		
-		/**
-		 * Draws and resets the buffer.
-		 */
-		public void flush(OGLGraphics g, StepInstance inst)
-		{
-			if (vboFlush)
-				return;
-			
-			g.setTextureUnit(0);
-			g.matrixMode(MatrixType.TEXTURE); 
-			g.matrixPush();
-			g.matrixTranslate(inst.pivot_s, inst.pivot_t, 0);
-			g.matrixRotateZ(inst.texture_rot);
-			g.matrixTranslate(-inst.pivot_s, -inst.pivot_t, 0);
-			g.matrixTranslate(inst.texture_s0, inst.texture_t0, 0);
-			g.matrixScale(inst.texture_s1-inst.texture_s0, 
-					inst.texture_t1-inst.texture_t0, 1);
-		
-			geometryBuffer.setCapacity(g, CachingHint.STREAM_DRAW, geometryListIndex);
-			geometryBuffer.sendSubData(g, geometryFloatBuffer, geometryListIndex, 0);
-			
-			OGLGeometryUtils.drawInterleavedGeometry(g, geometryBuffer, GeometryType.QUADS, vboElements * 4, geometryInfo);
-			
-			polygonsRendered += vboElements;
-			
-			geometryFloatBuffer.rewind();
-			geometryListIndex = 0;
-			vboElements = 0;
-
-			g.setTextureUnit(0);
-			g.matrixMode(MatrixType.TEXTURE); g.matrixPop();
-			vboFlush = true;
-		}
-		
-		/**
-		 * Adds a set of coordinates to the buffer.
-		 * @param inst the step instance to use for color information.
-		 * @param node the node being drawn.
-		 */
-		public void addTileCoords(StepInstance inst, Node node)
-		{
-			int vertThreshold = ((int)(camera.getWidth()/defaultTileWidth)+1) * ((int)(camera.getHeight()/defaultTileHeight)+1) * 360;
-			if (geometryFloatBuffer == null || vertThreshold > geometryFloatBuffer.capacity())
-				geometryFloatBuffer = Common.allocDirectFloatBuffer(vertThreshold);
-			
-			float red = node.r * inst.color_r;
-			float green = node.g * inst.color_g;
-			float blue = node.b * inst.color_b;
-			float alpha = node.a * inst.color_a;
-			
-			int n = geometryListIndex;
-
-			geometryFloatBuffer.put(n+0, node.x);
-			geometryFloatBuffer.put(n+1, node.y + node.height);
-			geometryFloatBuffer.put(n+2, depth);
-			geometryFloatBuffer.put(n+3, node.s0);
-			geometryFloatBuffer.put(n+4, getFlipY() ? node.t1 : node.t0);
-			geometryFloatBuffer.put(n+5, red);
-			geometryFloatBuffer.put(n+6, green);
-			geometryFloatBuffer.put(n+7, blue);
-			geometryFloatBuffer.put(n+8, alpha);
-			// vertex 2
-			geometryFloatBuffer.put(n+9, node.x);
-			geometryFloatBuffer.put(n+10, node.y);
-			geometryFloatBuffer.put(n+11, depth);
-			geometryFloatBuffer.put(n+12, node.s0);
-			geometryFloatBuffer.put(n+13, getFlipY() ? node.t0 : node.t1);
-			geometryFloatBuffer.put(n+14, red);
-			geometryFloatBuffer.put(n+15, green);
-			geometryFloatBuffer.put(n+16, blue);
-			geometryFloatBuffer.put(n+17, alpha);
-			// vertex 3
-			geometryFloatBuffer.put(n+18, node.x + node.width);
-			geometryFloatBuffer.put(n+19, node.y);
-			geometryFloatBuffer.put(n+20, depth);
-			geometryFloatBuffer.put(n+21, node.s1);
-			geometryFloatBuffer.put(n+22, getFlipY() ? node.t0 : node.t1);
-			geometryFloatBuffer.put(n+23, red);
-			geometryFloatBuffer.put(n+24, green);
-			geometryFloatBuffer.put(n+25, blue);
-			geometryFloatBuffer.put(n+26, alpha);
-			// vertex 4
-			geometryFloatBuffer.put(n+27, node.x + node.width);
-			geometryFloatBuffer.put(n+28, node.y + node.height);
-			geometryFloatBuffer.put(n+29, depth);
-			geometryFloatBuffer.put(n+30, node.s1);
-			geometryFloatBuffer.put(n+31, getFlipY() ? node.t1 : node.t0);
-			geometryFloatBuffer.put(n+32, red);
-			geometryFloatBuffer.put(n+33, green);
-			geometryFloatBuffer.put(n+34, blue);
-			geometryFloatBuffer.put(n+35, alpha);
-
-			geometryListIndex += 36;
-			
-			vboFlush = false;
-			vboElements++;
-		}
-		
-	}
-
-	/**
-	 * Holds calculated step information - lifetime of current info
-	 * is the current frame. Used for reusing data that would be calculated
-	 * many times.
-	 */
-	protected static class StepInstance
-	{
-		public float texture_rot;
-		public float texture_s0;
-		public float texture_t0;
-		public float texture_s1;
-		public float texture_t1;
-		public float color_r;
-		public float color_g;
-		public float color_b;
-		public float color_a;
-		public float pivot_s;
-		public float pivot_t;
-	}
-
-	/** Context for object switching. */
-	protected static class Context
-	{
-		public Step step;
-		public BlendType blendMode;
-		public OGLTexture2D texture;
-		public OGLTexture2D[] multitexture;
-		public OGLShaderProgram shader;
-		public int pass;
-		
-		Context()
-		{
-			clear();
-		}
-		
-		void clear()
-		{
-			step = null;
-			blendMode = null;
-			texture = null;
-			multitexture = null;
-			shader = null;
-			pass = 0;
-		}
 	}
 	
 }

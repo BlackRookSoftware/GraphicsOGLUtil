@@ -8,7 +8,11 @@
 package com.blackrook.ogl.util.tile2d.model;
 
 import com.blackrook.commons.math.RMath;
-import com.blackrook.ogl.util.OGLSkin;
+import com.blackrook.ogl.data.OGLColor;
+import com.blackrook.ogl.enums.BlendFunc;
+import com.blackrook.ogl.enums.TextureMode;
+import com.blackrook.ogl.util.resource.OGLShaderResource;
+import com.blackrook.ogl.util.resource.OGLTextureResource;
 import com.blackrook.ogl.util.tile2d.OGLTile2DModel;
 import com.blackrook.ogl.util.tile2d.OGLTile2DNode;
 
@@ -33,7 +37,7 @@ public class TileDefaultModel implements OGLTile2DModel
 	}
 	
 	/** OGL Skin map. */
-	private OGLSkin[][] skins;
+	private OGLTextureResource[][][] textures;
 	/** Wrapping model, X-coordinate. */
 	private Wrap wrapX;
 	/** Wrapping model, Y-coordinate. */
@@ -50,7 +54,7 @@ public class TileDefaultModel implements OGLTile2DModel
 		if (width <= 0 || height <= 0)
 			throw new IllegalArgumentException("Neither width nor height can be null.");
 		
-		skins = new OGLSkin[width][height];
+		textures = new OGLTextureResource[width][height][0];
 		wrapX = Wrap.NONE;
 		wrapY = Wrap.NONE;
 	}
@@ -60,7 +64,7 @@ public class TileDefaultModel implements OGLTile2DModel
 	 */
 	public int getWidth()
 	{
-		return skins.length;
+		return textures.length;
 	}
 	
 	/**
@@ -68,7 +72,7 @@ public class TileDefaultModel implements OGLTile2DModel
 	 */
 	public int getHeight()
 	{
-		return skins[0].length;
+		return textures[0].length;
 	}
 	
 	/**
@@ -103,37 +107,67 @@ public class TileDefaultModel implements OGLTile2DModel
 		return wrapY;
 	}
 	
+	@Override
+	public BlendFunc getBlendingFunction(int x, int y)
+	{
+		return BlendFunc.ALPHA;
+	}
+
 	/**
-	 * Sets a skin at a particular coordinate.
+	 * Sets a textures at a particular coordinate.
 	 * @param x the x-coordinate.
 	 * @param y the y-coordinate.
-	 * @param skin the skin to set. Can be null.
 	 */
-	public void setSkin(int x, int y, OGLSkin skin)
+	public void setTextures(int x, int y, OGLTextureResource ... textures)
 	{
-		skins[x][y] = skin;
+		this.textures[x][y] = textures;
 	}
 	
 	@Override
-	public OGLSkin getSkin(int x, int y)
+	public int getTextures(int x, int y, OGLTextureResource[] outTextures)
 	{
 		x = correctX(x);
 		y = correctY(y);
 		if (!isOnGrid(x, y))
-			return null;
-		return skins[x][y];
+			return 0;
+		
+		int out = Math.min(textures[x][y].length, outTextures.length);
+		System.arraycopy(textures[x][y], 0, outTextures, 0, out);
+		return out;
+	}
+
+	@Override
+	public TextureMode getTextureMode(int x, int y)
+	{
+		return TextureMode.REPLACE;
 	}
 
 	@Override
 	public boolean getVisible(int x, int y)
 	{
-		return getSkin(x, y) != null;
+		x = correctX(x);
+		y = correctY(y);
+		return isOnGrid(x, y) && textures[x][y].length > 0; 
 	}
 
 	@Override
-	public int getColorARGB(int x, int y)
+	public OGLShaderResource getShader(int x, int y)
 	{
-		return -1;
+		x = correctX(x);
+		y = correctY(y);
+		if (!isOnGrid(x, y))
+			return null;
+	
+		return null;
+	}
+
+	@Override
+	public void getColor(int x, int y, OGLColor outColor)
+	{
+		x = correctX(x);
+		y = correctY(y);
+		if (isOnGrid(x, y))
+			outColor.set(OGLColor.WHITE);
 	}
 
 	@Override
@@ -145,30 +179,6 @@ public class TileDefaultModel implements OGLTile2DModel
 		out[3] = 1f;
 	}
 
-	@Override
-	public float getOffsetX(int x, int y)
-	{
-		return 0f;
-	}
-
-	@Override
-	public float getOffsetY(int x, int y)
-	{
-		return 0f;
-	}
-
-	@Override
-	public float getScaleX(int x, int y)
-	{
-		return 1f;
-	}
-
-	@Override
-	public float getScaleY(int x, int y)
-	{
-		return 1f;
-	}
-	
 	/**
 	 * Checks if a set of coordinates are within the grid's bounds.
 	 * @param x the x-coordinate.

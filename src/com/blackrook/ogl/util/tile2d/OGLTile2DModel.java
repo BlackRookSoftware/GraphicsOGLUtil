@@ -7,7 +7,11 @@
  ******************************************************************************/
 package com.blackrook.ogl.util.tile2d;
 
-import com.blackrook.ogl.util.OGLSkin;
+import com.blackrook.ogl.data.OGLColor;
+import com.blackrook.ogl.enums.BlendFunc;
+import com.blackrook.ogl.enums.TextureMode;
+import com.blackrook.ogl.util.resource.OGLShaderResource;
+import com.blackrook.ogl.util.resource.OGLTextureResource;
 
 /**
  * The rendering model to use for {@link OGLTile2DNode}.
@@ -19,12 +23,47 @@ import com.blackrook.ogl.util.OGLSkin;
 public interface OGLTile2DModel
 {
 	/**
+	 * Gets the appropriate shader program for rendering this tile.
+	 * Null should imply that the default shader should be used. 
+	 * @param x	the grid x-coordinate.
+	 * @param y the grid y-coordinate.
+	 * @return the shader program to use.
+	 */
+	public abstract OGLShaderResource getShader(int x, int y);
+
+	/**
 	 * Gets the appropriate skin set for a set of coordinates. 
 	 * @param x	the grid x-coordinate.
 	 * @param y the grid y-coordinate.
-	 * @return the OGLSkin, or null if no OGLSkin for the position on the grid.
+	 * @param outTextures the output array for the textures.
+	 * @return the amount of textures to bind.
 	 */
-	public abstract OGLSkin getSkin(int x, int y);
+	public abstract int getTextures(int x, int y, OGLTextureResource[] outTextures);
+
+	/**
+	 * Gets the appropriate texture offsets for a set of coordinates. 
+	 * @param x	the grid x-coordinate.
+	 * @param y the grid y-coordinate.
+	 * @param out the output array, must be length 4 or greater. 
+	 * Assumed order is S0, T0, S1, T1.
+	 */
+	public abstract void getTextureOffsets(int x, int y, float[] out);
+
+	/**
+	 * Gets the appropriate texture mode for rendering this tile.
+	 * @param x	the grid x-coordinate.
+	 * @param y the grid y-coordinate.
+	 * @return the texture mode to use.
+	 */
+	public abstract TextureMode getTextureMode(int x, int y);
+
+	/**
+	 * Gets the appropriate blending mode for rendering this tile.
+	 * @param x	the grid x-coordinate.
+	 * @param y the grid y-coordinate.
+	 * @return the blending function to use.
+	 */
+	public abstract BlendFunc getBlendingFunction(int x, int y);
 
 	/**
 	 * Gets if a tile is visible for a set of coordinates and the
@@ -39,36 +78,8 @@ public interface OGLTile2DModel
 	 * current wrapping types.
 	 * @param x	the grid x-coordinate.
 	 * @param y the grid y-coordinate.
+	 * @param outColor the output color.
 	 */
-	public abstract int getColorARGB(int x, int y);
+	public abstract void getColor(int x, int y, OGLColor outColor);
 
-	/**
-	 * Gets the appropriate texture offsets for a set of coordinates. 
-	 * @param x	the grid x-coordinate.
-	 * @param y the grid y-coordinate.
-	 * @param out the output array, must be length 4 or greater. 
-	 * Assumed order is S0, T0, S1, T1.
-	 */
-	public abstract void getTextureOffsets(int x, int y, float[] out);
-
-	/**
-	 * Returns the x-offset of a tile in units.
-	 */
-	public abstract float getOffsetX(int x, int y);
-
-	/**
-	 * Returns the y-offset of a tile in units.
-	 */
-	public abstract float getOffsetY(int x, int y);
-
-	/**
-	 * Gets the individual tile scale, x-axis, for a specific tile.
-	 */
-	public abstract float getScaleX(int x, int y);
-
-	/**
-	 * Gets the individual tile scale, y-axis, for a specific tile.
-	 */
-	public abstract float getScaleY(int x, int y);
-	
 }

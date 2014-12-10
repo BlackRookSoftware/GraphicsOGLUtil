@@ -10,7 +10,6 @@ package com.blackrook.ogl.util.frame;
 import com.blackrook.ogl.OGLGraphics;
 import com.blackrook.ogl.node.OGLMultiNode;
 import com.blackrook.ogl.util.OGLResourceLoader;
-import com.blackrook.ogl.util.OGLResourceLoaderUser;
 import com.blackrook.ogl.util.resource.OGLTextureResource;
 
 /**
@@ -18,7 +17,7 @@ import com.blackrook.ogl.util.resource.OGLTextureResource;
  * for drawing into a render target.
  * @author Matthew Tropiano
  */
-public class OGLRenderTargetNode extends OGLMultiNode implements OGLResourceLoaderUser
+public class OGLRenderTargetNode extends OGLMultiNode
 {
 	/** Reference to Resource loader. */
 	private OGLResourceLoader loader;
@@ -33,22 +32,10 @@ public class OGLRenderTargetNode extends OGLMultiNode implements OGLResourceLoad
 	public OGLRenderTargetNode(OGLResourceLoader loader, OGLTextureResource renderTarget)
 	{
 		super();
-		setResourceLoader(loader);
+		this.loader = loader;
 		this.renderTarget = renderTarget;
 	}
 	
-	@Override
-	public OGLResourceLoader getResourceLoader()
-	{
-		return loader;
-	}
-
-	@Override
-	public void setResourceLoader(OGLResourceLoader loader)
-	{
-		this.loader = loader;
-	}
-
 	@Override
 	public void preNodeDisplay(OGLGraphics g)
 	{
