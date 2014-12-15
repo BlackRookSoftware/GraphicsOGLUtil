@@ -7,27 +7,29 @@
  ******************************************************************************/
 package com.blackrook.ogl.util;
 
-import com.blackrook.commons.list.List;
-import com.blackrook.commons.spatialhash.SpatialHashable;
-import com.blackrook.ogl.data.OGLColor;
-
 /**
  * Encapsulated camera info for scenes. Comes with a way to detect changes in an event-model fashion.
  * @author Matthew Tropiano
  */
-public class OGL2DCamera implements SpatialHashable
+public class OGL2DCamera
 {
-	/** Set of registered camera listeners. */
-	protected List<OGL2DCameraListener> listeners;
+	/** Camera viewport X start (in canvas widths, 0 to 1). */
+	protected float viewportX;
+	/** Camera viewport Y start (in canvas heights, 0 to 1). */
+	protected float viewportY;
+	/** Camera viewport width (in canvas widths, 0 to 1). */
+	protected float viewportWidth;
+	/** Camera viewport height (in canvas heights, 0 to 1). */
+	protected float viewportHeight;
 
 	/** Camera X */
-	protected float cameraX;
+	protected float centerX;
 	/** Camera Y */
-	protected float cameraY;
+	protected float centerY;
 	/** Camera Width */
-	protected float cameraWidth;
+	protected float halfWidth;
 	/** Camera Height */
-	protected float cameraHeight;
+	protected float halfHeight;
 
 	/** Scissor X in camera length. */
 	protected float scissorX;
@@ -40,75 +42,76 @@ public class OGL2DCamera implements SpatialHashable
 	/** Scissor enabled. */
 	protected boolean scissorEnabled;
 	
-	/** Camera's red color. */
-	protected float red;
-	/** Camera's green color. */
-	protected float green;
-	/** Camera's blue color. */
-	protected float blue;
-	/** Camera's alpha color. */
-	protected float alpha;
-	
 	public OGL2DCamera()
 	{
-		listeners = new List<OGL2DCameraListener>(1,3);
-		cameraX = 0f;
-		cameraY = 0f;
-		cameraWidth = 0f;
-		cameraHeight = 0f;
+		viewportX = 0f;
+		viewportY = 0f;
+		viewportWidth = 1f;
+		viewportHeight = 1f;
+		centerX = 0f;
+		centerY = 0f;
+		halfWidth = 0f;
+		halfHeight = 0f;
 		scissorX = 0f;
 		scissorY = 0f;
 		scissorWidth = 1f;
 		scissorHeight = 1f;
 		scissorEnabled = false;
-		red = 1f;
-		green = 1f;
-		blue = 1f;
-		alpha = 1f;
-	}
-	
-	/**
-	 * Adds a camera listener to this.
-	 */
-	public void addListener(OGL2DCameraListener listener)
-	{
-		listeners.add(listener);
-	}
-	
-	/**
-	 * Removes a camera listener from this.
-	 */
-	public boolean removeListener(OGL2DCameraListener listener)
-	{
-		return listeners.remove(listener);
 	}
 	
 	/**
 	 * Sets the camera bounds.
-	 * @param x			the left corner of the camera.
-	 * @param y			the top corner of the camera.
-	 * @param width		the width of the camera.
-	 * @param height	the height of the camera.
+	 * @param x	the left corner of the camera.
+	 * @param y	the top/bottom corner of the camera (depending on view).
+	 * @param width	the width of the camera.
+	 * @param height the height of the camera.
 	 */
 	public void setBounds(float x, float y, float width, float height)
 	{
 		if (height == 0) height = 1;
-		float newCamWidth = width;
-		float newCamHeight = height;
-	
-		float cameraChangeX = x - cameraX;
-		float cameraChangeY = y - cameraY;
-		float cameraChangeWidth = newCamWidth - cameraWidth;
-		float cameraChangeHeight = newCamHeight - cameraHeight;
-	
-		cameraX = x;
-		cameraY = y;
-		cameraWidth = newCamWidth;
-		cameraHeight = newCamHeight;
+
+		float hw = width / 2f;
+		float hh = height / 2f;
 		
-		if (cameraChangeX != 0 || cameraChangeY != 0 || cameraChangeWidth != 0 || cameraChangeHeight != 0)
-			fireChange(cameraChangeX, cameraChangeY, cameraChangeWidth, cameraChangeHeight);
+		centerX = x + hw;
+		centerY = y + hh;
+		halfWidth = hw;
+		halfHeight = hh;
 	}
+	
+	/**
+	 * Sets the camera centerpoint.
+	 * @param x	the left corner of the camera.
+	 * @param y	the top/bottom corner of the camera (depending on view).
+	 */
+	public void setCenter(float x, float y)
+	{
+		centerX = x;
+		centerY = y;
+	}
+	
+	/**
+	 * Sets the camera dimensions.
+	 * @param width	the width of the camera.
+	 * @param height the height of the camera.
+	 */
+	public void setDimensions(float width, float height)
+	{
+		halfWidth = width / 2f;
+		halfHeight = height / 2f;
+	}
+	
+	/**
+	 * Sets the camera dimensions in halves of a dimension.
+	 * @param halfWidth	the half-width of the camera.
+	 * @param halfHeight the half-height of the camera.
+	 */
+	public void setHalfWidths(float halfWidth, float halfHeight)
+	{
+		this.halfWidth = halfWidth;
+		this.halfHeight = halfHeight;
+	}
+	
 	/**
 	 * Translates the camera bounds.
 	 * @param x		the amount to move the camera, X coordinate.
@@ -116,15 +119,10 @@ public class OGL2DCamera implements SpatialHashable
 	 */
 	public void translateBounds(float x, float y)
 	{
-		float cameraChangeX = x;
-		float cameraChangeY = y;
-	
-		cameraX += x;
-		cameraY += y;
-	
-		if (x != 0 || y != 0)
-			fireChange(cameraChangeX, cameraChangeY, 0, 0);
+		centerX += x;
+		centerY += y;
 	}
+	
 	/**
 	 * Stretches the camera bounds.
 	 * @param width	the amount to stretch the camera width.
@@ -132,14 +130,8 @@ public class OGL2DCamera implements SpatialHashable
 	 */
 	public void stretchBounds(float width, float height)
 	{
-		float cameraChangeWidth = width;
-		float cameraChangeHeight = height;
-	
-		cameraWidth += width;
-		cameraHeight += height;
-	
-		if (width != 0 || height != 0)
-			fireChange(0, 0, cameraChangeWidth, cameraChangeHeight);
+		halfWidth += width / 2f;
+		halfHeight += height / 2f;
 	}
 	/**
 	 * Zooms the camera bounds in or out.
@@ -147,24 +139,8 @@ public class OGL2DCamera implements SpatialHashable
 	 */
 	public void zoomBounds(float factor)
 	{
-		float w = 0f;
-		float h = 0f;
-		
-		w = cameraWidth * factor;
-		h = cameraHeight * factor; 
-	
-		float cameraChangeWidth = w - cameraWidth;
-		float cameraChangeHeight = h - cameraHeight;
-		float cameraChangeX = (cameraWidth - w) / 2;
-		float cameraChangeY = (cameraHeight - h) / 2;
-	
-		cameraX += (cameraWidth - w) / 2;
-		cameraY += (cameraHeight - h) / 2;
-		cameraWidth = w;
-		cameraHeight = h;
-	
-		if (factor != 1.0f)
-			fireChange(cameraChangeX, cameraChangeY, cameraChangeWidth, cameraChangeHeight);
+		halfWidth = halfWidth * factor;
+		halfHeight = halfHeight * factor;
 	}
 
 	/**
@@ -176,17 +152,37 @@ public class OGL2DCamera implements SpatialHashable
 	 */
 	public void correctBoundsUsingAspect(float aspectRatio)
 	{
-		float cx = cameraX;
-		float cy = cameraY;
-		float cw = cameraWidth;
-		float ch = cameraHeight;
+		/*
+		float ca = halfWidth / halfHeight;
 		
-		float ca = cameraWidth / cameraHeight;
+		float sux = scissorX * halfWidth * 2;
+		float suy = scissorY * halfHeight * 2;
+		float suw = scissorWidth * halfWidth * 2;
+		float suh = scissorHeight * halfHeight * 2;
 		
-		float sux = scissorX * cameraWidth;
-		float suy = scissorY * cameraHeight;
-		float suw = scissorWidth * cameraWidth;
-		float suh = scissorHeight * cameraHeight;
+		// make wider (height stays, width changes)
+		if (aspectRatio > 1f)
+		{
+			halfWidth = aspectRatio * halfHeight;
+		}
+		// make skinnier (width stays, height changes)
+		else if (aspectRatio < 1f)
+		{
+			halfHeight = aspectRatio * halfWidth;
+		}
+		*/
+		
+		float cx = centerX - halfWidth;
+		float cy = centerY - halfHeight;
+		float cw = halfWidth * 2;
+		float ch = halfHeight * 2;
+		
+		float ca = halfWidth / halfHeight;
+		
+		float sux = scissorX * halfWidth * 2;
+		float suy = scissorY * halfHeight * 2;
+		float suw = scissorWidth * halfWidth * 2;
+		float suh = scissorHeight * halfHeight * 2;
 		
 		// make wider (height stays, width changes)
 		if (aspectRatio > ca)
@@ -210,6 +206,7 @@ public class OGL2DCamera implements SpatialHashable
 		
 		setBounds(cx, cy, cw, ch);
 		setScissorBounds(sux / cw, suy / ch, suw / cw, suh / ch);
+
 	}
 	
 	/**
@@ -239,80 +236,74 @@ public class OGL2DCamera implements SpatialHashable
 	}
 	
 	/**
-	 * A method that gets called whenever this camera gets changed somehow.
+	 * Sets this camera's viewport in camera lengths.
+	 * @param x x-axis viewport start (0 to 1).
+	 * @param y y-axis viewport start (0 to 1).
+	 * @param width the width of the viewport in camera lengths (0 to 1).
+	 * @param height the height of the viewport in camera lengths (0 to 1).
 	 */
-	protected void fireChange(float changeX, float changeY, float changeWidth, float changeHeight)
+	public void setViewport(float x, float y, float width, float height)
 	{
-		for (OGL2DCameraListener listener : listeners)
-			listener.onCameraChange(changeX, changeY, changeWidth, changeHeight);
+		viewportX = x;
+		viewportY = y;
+		viewportWidth = width;
+		viewportHeight = height;
+	}
+	
+	/**
+	 * Returns the radius of the camera view.
+	 */
+	public float getRadius()
+	{
+		return (float)Math.sqrt((halfWidth * halfWidth) + (halfHeight * halfHeight));
 	}
 
-	public float getX()
+	/**
+	 * Returns the squared radius of the camera view.
+	 */
+	public float getSquaredRadius()
 	{
-		return cameraX;
+		return (halfWidth * halfWidth) + (halfHeight * halfHeight);
 	}
 
-	public float getY()
+	public float getViewportX()
 	{
-		return cameraY;
+		return viewportX;
 	}
 
-	public float getHeight()
+	public float getViewportY()
 	{
-		return cameraHeight;
+		return viewportY;
 	}
 
-	public float getWidth()
+	public float getViewportWidth()
 	{
-		return cameraWidth;
+		return viewportWidth;
 	}
 
-	@Override
-	public double getObjectHalfDepth()
+	public float getViewportHeight()
 	{
-		return 0;
+		return viewportHeight;
 	}
 
-	@Override
-	public double getObjectHalfHeight()
+	public float getCenterX()
 	{
-		return cameraHeight/2f;
+		return centerX;
 	}
 
-	@Override
-	public double getObjectHalfWidth()
+	public float getCenterY()
 	{
-		return cameraWidth/2f;
+		return centerY;
 	}
 
-	@Override
-	public double getObjectCenterX()
+	public float getHalfHeight()
 	{
-		return cameraX + (cameraWidth/2f);
+		return halfHeight;
 	}
 
-	@Override
-	public double getObjectCenterY()
+	public float getHalfWidth()
 	{
-		return cameraY + (cameraHeight/2f);
-	}
-
-	@Override
-	public double getObjectCenterZ()
-	{
-		return 0;
-	}
-
-	@Override
-	public double getObjectRadius()
-	{
-		return (float)Math.sqrt((cameraWidth/2f)*(cameraWidth/2f) + (cameraHeight/2f)*(cameraHeight/2f));
-	}
-
-	@Override
-	public boolean useObjectRadius()
-	{
-		return false;
+		return halfWidth;
 	}
 
 	public float getScissorX()
@@ -338,82 +329,6 @@ public class OGL2DCamera implements SpatialHashable
 	public boolean getScissorEnabled() 
 	{
 		return scissorEnabled;
-	}
-
-	@Override
-	public double getObjectSweepX()
-	{
-		return 0;
-	}
-
-	@Override
-	public double getObjectSweepY()
-	{
-		return 0;
-	}
-
-	@Override
-	public double getObjectSweepZ()
-	{
-		return 0;
-	}
-
-	/**
-	 * Sets the camera's color.
-	 * The final color of objects "seen" by this camera are multiplied by this color.
-	 * @param red the red channel color.
-	 * @param green the green channel color.
-	 * @param blue the blue channel color.
-	 * @param alpha the alpha channel color.
-	 */
-	public void setColor(float red, float green, float blue, float alpha)
-	{
-		this.red = red;
-		this.green = green;
-		this.blue = blue;
-		this.alpha = alpha;
-	}
-	
-	/**
-	 * Sets the camera's color.
-	 * The final color of objects "seen" by this camera are multiplied by this color.
-	 * @param color
-	 */
-	public void setColor(OGLColor color)
-	{
-		setColor(color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha());
-	}
-	
-	/**
-	 * Gets this camera's red color scalar.
-	 */
-	public float getRed()
-	{
-		return red;
-	}
-
-	/**
-	 * Gets this camera's green color scalar.
-	 */
-	public float getGreen()
-	{
-		return green;
-	}
-
-	/**
-	 * Gets this camera's blue color scalar.
-	 */
-	public float getBlue()
-	{
-		return blue;
-	}
-
-	/**
-	 * Gets this camera's alpha color scalar.
-	 */
-	public float getAlpha()
-	{
-		return alpha;
 	}
 
 }

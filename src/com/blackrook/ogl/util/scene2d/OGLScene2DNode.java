@@ -17,6 +17,7 @@ import com.blackrook.commons.list.List;
 import com.blackrook.commons.math.RMath;
 import com.blackrook.commons.math.geometry.Point2F;
 import com.blackrook.commons.spatialhash.SpatialHashable;
+import com.blackrook.ogl.OGLCanvasNode;
 import com.blackrook.ogl.OGLGeometryUtils;
 import com.blackrook.ogl.OGLGeometryUtils.GeometryInfo;
 import com.blackrook.ogl.OGLGraphics;
@@ -44,7 +45,7 @@ import com.blackrook.ogl.util.resource.OGLTextureResource;
  * OGL Node that does 2D scene rendering via a multipass method.
  * @author Matthew Tropiano
  */
-public class OGLScene2DNode<T extends Object> extends OGLCanvasNodeAdapter
+public class OGLScene2DNode<T extends Object> implements OGLCanvasNode
 {
 	/** Is this layer enabled? */
 	private boolean enabled;
@@ -165,12 +166,9 @@ public class OGLScene2DNode<T extends Object> extends OGLCanvasNodeAdapter
 	/**
 	 * Sets the current camera and adds the listener to it. 
 	 */
-	protected void setCamera(OGL2DCamera newCamera)
+	public void setCamera(OGL2DCamera newCamera)
 	{
-		if (camera != null)
-			camera.removeListener(cameraListener);
 		camera = newCamera;
-		camera.addListener(cameraListener);
 	}
 
 	/**
@@ -371,42 +369,6 @@ public class OGLScene2DNode<T extends Object> extends OGLCanvasNodeAdapter
 		}
 	}
 
-	/**
-	 * Checks if an object should be excluded from visibility.
-	 * By default, this just checks {@link OGLScene2DElement#isVisible()} for visibility.
-	 * If overridden, this can check for literally anything!
-	 * @param object the object to check.
-	 * @return true if so (should be excluded), false otherwise.
-	 */
-	protected boolean excludeObjectFromVisibility(T object)
-	{
-		return !object.isVisible() || !objectIsOnCamera(object);
-	}
-	
-	/**
-	 * Checks if an object is in the camera's view.
-	 */
-	protected boolean objectIsOnCamera(SpatialHashable e)
-	{
-		return
-			e.getObjectCenterX() - e.getObjectHalfWidth() <= camera.getObjectCenterX() + camera.getObjectHalfWidth() &&
-			e.getObjectCenterY() - e.getObjectHalfHeight() <= camera.getObjectCenterY() + camera.getObjectHalfHeight() &&
-			e.getObjectCenterX() + e.getObjectHalfWidth() >= camera.getObjectCenterX() - camera.getObjectHalfWidth() &&
-			e.getObjectCenterY() + e.getObjectHalfHeight() >= camera.getObjectCenterY() - camera.getObjectHalfHeight();
-	}
-
-	/**
-	 * Checks if an object is in the camera's view.
-	 */
-	protected boolean objectIsOnCamera(OGLScene2DElement p)
-	{
-		return
-			p.getRenderPositionX() - p.getRenderHalfWidth() <= camera.getObjectCenterX() + camera.getObjectHalfWidth() &&
-			p.getRenderPositionY() - p.getRenderHalfHeight() <= camera.getObjectCenterY() + camera.getObjectHalfHeight() &&
-			p.getRenderPositionX() + p.getRenderHalfWidth() >= camera.getObjectCenterX() - camera.getObjectHalfWidth() &&
-			p.getRenderPositionY() + p.getRenderHalfHeight() >= camera.getObjectCenterY() - camera.getObjectHalfHeight();
-	}
-
 	protected void renderListAddNode(OGLGraphics g, OGLResourceLoader loader, 
 			OGLScene2DElement element, int id, Step step, int pass, float zOrder)
 	{
@@ -515,22 +477,22 @@ public class OGLScene2DNode<T extends Object> extends OGLCanvasNodeAdapter
 		
 		// can't set orthographic projection if either axis is completely collapsed.
 		// it causes a GL error.
-		if (camera.getObjectHalfWidth() != 0 && camera.getObjectHalfHeight() != 0)
+		if (camera.getHalfWidth() != 0 && camera.getHalfHeight() != 0)
 		{
 			if (getFlipY())
 				g.matrixOrtho(
 					0f,
-					camera.getWidth(),
-					camera.getHeight(),
+					camera.getHalfWidth() * 2,
+					camera.getHalfHeight() * 2,
 					0f,
 					1,
 					-1);
 			else
 				g.matrixOrtho(
 					0f,
-					camera.getWidth(),
+					camera.getHalfWidth() * 2,
 					0f,
-					camera.getHeight(),
+					camera.getHalfHeight() * 2,
 					1,
 					-1);
 		}
@@ -541,8 +503,6 @@ public class OGLScene2DNode<T extends Object> extends OGLCanvasNodeAdapter
 			displayContextShaderBreak(g, context, n);
 			displayContextTextureBreak(g, context, n);
 			displayContextBlendBreak(g, context, n);
-			displayContextTexGenSBreak(g, context, n);
-			displayContextTexGenTBreak(g, context, n);
 			displayContextPassBreak(g, context, n);
 			displayContextStepBreak(g, context, n);
 			displayContextMeshBreak(g, context, n);

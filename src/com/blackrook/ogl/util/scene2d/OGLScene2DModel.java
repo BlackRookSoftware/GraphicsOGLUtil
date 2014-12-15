@@ -1,8 +1,11 @@
 package com.blackrook.ogl.util.scene2d;
 
-import com.blackrook.commons.math.geometry.Rectangle2F;
+import com.blackrook.commons.math.Tuple2F;
+import com.blackrook.commons.math.geometry.Point2F;
 import com.blackrook.ogl.data.OGLColor;
+import com.blackrook.ogl.enums.BlendFunc;
 import com.blackrook.ogl.mesh.MeshView;
+import com.blackrook.ogl.util.resource.OGLShaderResource;
 import com.blackrook.ogl.util.resource.OGLTextureResource;
 
 /**
@@ -92,6 +95,19 @@ public interface OGLScene2DModel<T extends Object>
 	public boolean objectIsInBox(T object, double centerX, double centerY, double halfWidth, double halfHeight); 
 	
 	/**
+	 * Gets the blending to use for a particular object.
+	 * @param object the object.
+	 */
+	public BlendFunc getObjectBlending(T object);
+	
+	/**
+	 * Gets the shader to use for a particular object.
+	 * @param object the object.
+	 * @return the shader to use. can be null.
+	 */
+	public OGLShaderResource getObjectShader(T object);
+	
+	/**
 	 * Gets the textures to use for a particular object.
 	 * @param object the object.
 	 * @param outTextures the array that receives the textures to use.
@@ -100,14 +116,7 @@ public interface OGLScene2DModel<T extends Object>
 	public int getObjectTextures(T object, OGLTextureResource[] outTextures);
 	
 	/**
-	 * Gets the 2D bounds of a particular object.
-	 * @param object the object.
-	 * @param outRect the rectangle to set the bounds on.
-	 */
-	public void getObjectBounds(T object, Rectangle2F outRect);
-	
-	/**
-	 * Gets the 2D bounds of a particular object.
+	 * Gets the color of a particular object.
 	 * @param object the object.
 	 * @param outColor the color object to set colors on.
 	 */
@@ -119,12 +128,40 @@ public interface OGLScene2DModel<T extends Object>
 	 * @return the mesh view to use for rendering the geometry.
 	 */
 	public MeshView getObjectMesh(T object);
-	
+
+	/**
+	 * Gets the depth for a particular object, which can
+	 * force the order by which it is rendered.
+	 * @param object the object.
+	 */
+	public float getObjectDepth(T object);
+
 	/**
 	 * Gets the a sort bias for a particular object, which can
 	 * force the order by which it is rendered.
 	 * @param object the object.
 	 */
-	public double getObjectSortBias(T object);
+	public float getObjectSortBias(T object);
+
+	/**
+	 * Gets the centerpoint of a particular object.
+	 * @param object the object.
+	 * @param centerPoint the centerpoint to set.
+	 */
+	public void getObjectCenter(T object, Point2F centerPoint);
+
+	/**
+	 * Gets the half widths of a particular object.
+	 * @param object the object.
+	 * @param widthTuple the two-dimensional tuple to set.
+	 */
+	public void getObjectHalfWidths(T object, Tuple2F widthTuple);
+
+	/**
+	 * Gets the color of a particular object.
+	 * @param object the object.
+	 * @return the rotation in degrees.
+	 */
+	public float getObjectRotation(T object);
 	
 }

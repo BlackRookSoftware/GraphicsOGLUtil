@@ -23,6 +23,14 @@ import com.blackrook.ogl.util.resource.OGLTextureResource;
 public interface OGLTile2DModel
 {
 	/**
+	 * Gets if a tile is visible for a set of coordinates and the
+	 * current wrapping types.
+	 * @param x	the grid x-coordinate.
+	 * @param y the grid y-coordinate.
+	 */
+	public abstract boolean getVisible(int x, int y);
+
+	/**
 	 * Gets the appropriate shader program for rendering this tile.
 	 * Null should imply that the default shader should be used. 
 	 * @param x	the grid x-coordinate.
@@ -66,14 +74,6 @@ public interface OGLTile2DModel
 	public abstract BlendFunc getBlendingFunction(int x, int y);
 
 	/**
-	 * Gets if a tile is visible for a set of coordinates and the
-	 * current wrapping types.
-	 * @param x	the grid x-coordinate.
-	 * @param y the grid y-coordinate.
-	 */
-	public abstract boolean getVisible(int x, int y);
-
-	/**
 	 * Gets the appropriate ARGB color integer for a set of coordinates and the
 	 * current wrapping types.
 	 * @param x	the grid x-coordinate.
@@ -81,5 +81,5 @@ public interface OGLTile2DModel
 	 * @param outColor the output color.
 	 */
 	public abstract void getColor(int x, int y, OGLColor outColor);
-
+	
 }

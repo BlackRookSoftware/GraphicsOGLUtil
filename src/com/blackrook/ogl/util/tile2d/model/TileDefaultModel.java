@@ -110,7 +110,7 @@ public class TileDefaultModel implements OGLTile2DModel
 	@Override
 	public BlendFunc getBlendingFunction(int x, int y)
 	{
-		return BlendFunc.ALPHA;
+		return BlendFunc.REPLACE;
 	}
 
 	/**
