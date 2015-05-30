@@ -11,7 +11,8 @@ import com.blackrook.commons.math.RMath;
 import com.blackrook.ogl.data.OGLColor;
 import com.blackrook.ogl.enums.BlendFunc;
 import com.blackrook.ogl.enums.TextureMode;
-import com.blackrook.ogl.util.resource.OGLShaderResource;
+import com.blackrook.ogl.object.shader.OGLShaderProgram;
+import com.blackrook.ogl.object.texture.OGLTexture2D;
 import com.blackrook.ogl.util.resource.OGLTextureResource;
 import com.blackrook.ogl.util.tile2d.OGLTile2DModel;
 import com.blackrook.ogl.util.tile2d.OGLTile2DNode;
@@ -124,7 +125,7 @@ public class TileDefaultModel implements OGLTile2DModel
 	}
 	
 	@Override
-	public int getTextures(int x, int y, OGLTextureResource[] outTextures)
+	public int getTextures(int x, int y, OGLTexture2D[] outTextures)
 	{
 		x = correctX(x);
 		y = correctY(y);
@@ -151,7 +152,7 @@ public class TileDefaultModel implements OGLTile2DModel
 	}
 
 	@Override
-	public OGLShaderResource getShader(int x, int y)
+	public OGLShaderProgram getShader(int x, int y)
 	{
 		x = correctX(x);
 		y = correctY(y);
@@ -222,6 +223,5 @@ public class TileDefaultModel implements OGLTile2DModel
 				return RMath.wrapValue(y, 0, getHeight());
 		}
 	}
-	
-	
+
 }

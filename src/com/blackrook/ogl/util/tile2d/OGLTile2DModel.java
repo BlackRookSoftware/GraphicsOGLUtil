@@ -10,8 +10,8 @@ package com.blackrook.ogl.util.tile2d;
 import com.blackrook.ogl.data.OGLColor;
 import com.blackrook.ogl.enums.BlendFunc;
 import com.blackrook.ogl.enums.TextureMode;
-import com.blackrook.ogl.util.resource.OGLShaderResource;
-import com.blackrook.ogl.util.resource.OGLTextureResource;
+import com.blackrook.ogl.object.shader.OGLShaderProgram;
+import com.blackrook.ogl.object.texture.OGLTexture2D;
 
 /**
  * The rendering model to use for {@link OGLTile2DNode}.
@@ -37,16 +37,24 @@ public interface OGLTile2DModel
 	 * @param y the grid y-coordinate.
 	 * @return the shader program to use.
 	 */
-	public abstract OGLShaderResource getShader(int x, int y);
+	public abstract OGLShaderProgram getShader(int x, int y);
 
 	/**
-	 * Gets the appropriate skin set for a set of coordinates. 
+	 * Gets the appropriate amount of texture units for a set of coordinates. 
 	 * @param x	the grid x-coordinate.
 	 * @param y the grid y-coordinate.
-	 * @param outTextures the output array for the textures.
 	 * @return the amount of textures to bind.
 	 */
-	public abstract int getTextures(int x, int y, OGLTextureResource[] outTextures);
+	public abstract int getTextureCount(int x, int y);
+
+	/**
+	 * Gets the appropriate texture unit for a set of coordinates. 
+	 * @param x	the grid x-coordinate.
+	 * @param y the grid y-coordinate.
+	 * @param unit the unit number.
+	 * @return the texture to use.
+	 */
+	public abstract OGLTexture2D getTexture(int x, int y, int unit);
 
 	/**
 	 * Gets the appropriate texture offsets for a set of coordinates. 

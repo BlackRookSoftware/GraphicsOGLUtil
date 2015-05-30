@@ -5,8 +5,8 @@ import com.blackrook.commons.math.geometry.Point2F;
 import com.blackrook.ogl.data.OGLColor;
 import com.blackrook.ogl.enums.BlendFunc;
 import com.blackrook.ogl.mesh.MeshView;
-import com.blackrook.ogl.util.resource.OGLShaderResource;
-import com.blackrook.ogl.util.resource.OGLTextureResource;
+import com.blackrook.ogl.object.shader.OGLShaderProgram;
+import com.blackrook.ogl.object.texture.OGLTexture2D;
 
 /**
  * Implementors of this class describe a model by which scene elements
@@ -105,7 +105,7 @@ public interface OGLScene2DModel<T extends Object>
 	 * @param object the object.
 	 * @return the shader to use. can be null.
 	 */
-	public OGLShaderResource getObjectShader(T object);
+	public OGLShaderProgram getObjectShader(T object);
 	
 	/**
 	 * Gets the textures to use for a particular object.
@@ -113,7 +113,7 @@ public interface OGLScene2DModel<T extends Object>
 	 * @param outTextures the array that receives the textures to use.
 	 * @return the amount of texture units.
 	 */
-	public int getObjectTextures(T object, OGLTextureResource[] outTextures);
+	public int getObjectTextures(T object, OGLTexture2D[] outTextures);
 	
 	/**
 	 * Gets the color of a particular object.

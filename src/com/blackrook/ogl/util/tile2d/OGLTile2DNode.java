@@ -28,9 +28,6 @@ import com.blackrook.ogl.object.buffer.OGLFloatBuffer;
 import com.blackrook.ogl.object.shader.OGLShaderProgram;
 import com.blackrook.ogl.object.texture.OGLTexture2D;
 import com.blackrook.ogl.util.OGL2DCamera;
-import com.blackrook.ogl.util.OGLResourceLoader;
-import com.blackrook.ogl.util.resource.OGLShaderResource;
-import com.blackrook.ogl.util.resource.OGLTextureResource;
 
 /**
  * An assisting class for drawing a tile-based whatever.
@@ -39,8 +36,6 @@ import com.blackrook.ogl.util.resource.OGLTextureResource;
  */
 public class OGLTile2DNode implements OGLCanvasNode
 {
-	/** Reference to resource loader. */
-	private OGLResourceLoader loader;
 	/** The list of bound listeners. */
 	private List<OGLTile2DListener> listenerList;
 	/** Tile model. */
@@ -105,8 +100,6 @@ public class OGLTile2DNode implements OGLCanvasNode
 	protected VBOContext vboContext;
 	/** Mesh for non-VBO. */
 	protected PolygonMesh mesh;
-	/** Temp texture resources. */
-	protected OGLTextureResource[] textureTemp;
 	/** Temp texture coordinates. */
 	protected float[] textureCoordTemp;
 	
@@ -135,29 +128,27 @@ public class OGLTile2DNode implements OGLCanvasNode
 	
 	/**
 	 * Creates a new tile grid.
-	 * @param loader the resource loader to use for texture and shader lookup.
+	 * @param model the tile model to use for rendering.
 	 * @param tileWidth the width of each tile in units.
 	 * @param tileHeight the height of the tile in units.
 	 */
-	public OGLTile2DNode(OGLResourceLoader loader, OGLTile2DModel model, float tileWidth, float tileHeight)
+	public OGLTile2DNode(OGLTile2DModel model, float tileWidth, float tileHeight)
 	{
-		this(loader, model, new OGL2DCamera(), tileWidth, tileHeight);
+		this(model, new OGL2DCamera(), tileWidth, tileHeight);
 	}
 
 	/**
 	 * Creates a new tile grid.
-	 * @param loader the resource loader to use for texture and shader lookup.
+	 * @param model the tile model to use for rendering.
 	 * @param camera the camera to use for defining visible bounds.
 	 * @param tileWidth the width of each tile in units.
 	 * @param tileHeight the height of the tile in units.
 	 */
-	public OGLTile2DNode(OGLResourceLoader loader, OGLTile2DModel model, OGL2DCamera camera, float tileWidth, float tileHeight)
+	public OGLTile2DNode(OGLTile2DModel model, OGL2DCamera camera, float tileWidth, float tileHeight)
 	{
-		this.loader = loader;
 		renderList = new List<Node>(200);
 		listenerList = new List<OGLTile2DListener>(2);
 		colorContext = new OGLColor();
-		textureTemp = new OGLTextureResource[16];
 		textureCoordTemp = new float[4];
 		mesh = new PolygonMesh(GeometryType.QUADS, 4, 1);
 		mouseGridX = -1;
@@ -798,21 +789,11 @@ public class OGLTile2DNode implements OGLCanvasNode
 		n.b = colorContext.getBlue();
 		n.a = colorContext.getAlpha();
 		
-		OGLShaderResource shadres = tileModel.getShader(ix, iy);
-		if (shadres != null)
-			n.shader = loader.getShader(shadres);
-		else
-			n.shader = null;
+		n.shader = tileModel.getShader(ix, iy);
 		
-		int units = tileModel.getTextures(ix, iy, textureTemp);
-		for (int i = 0; i < units; i++)
-		{
-			if (textureTemp[i] != null)
-				n.textures[i] = loader.getTexture(textureTemp[i]);
-			else
-				n.textures[i] = null;
-			n.textureCount = units;
-		}
+		n.textureCount = tileModel.getTextureCount(ix, iy);
+		for (int i = 0; i < n.textureCount; i++)
+			n.textures[i] = tileModel.getTexture(ix, iy, i);
 		
 		renderListSize++;
 	}
